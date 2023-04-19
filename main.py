@@ -7,7 +7,7 @@ from unidecode import unidecode
 
 class ContactList:
     def __init__(self, output: str = "cleaned", encoding: str = "latin1",):
-        # Gera caminho para o diretório base
+        # Generates path to base directory
         base_dir = os.getcwd()       
         
         # Self
@@ -23,6 +23,7 @@ class ContactList:
         self.output = f'{self.export_path}/{output}-{self.name}.csv'
     
     def __create_dir(self):
+        # Creates directory to export cleaned file
         export_path = (self.input + '/cleaned')
         if os.path.exists(export_path):
             pass
@@ -31,6 +32,7 @@ class ContactList:
         return export_path
     
     def __find_csv_filename(self, suffix=".csv" ):
+        # Finds csv file in the same directory as main.py
         filenames = os.listdir(self.input)
         file_list = [filename for filename in filenames if filename.endswith(suffix)]
         if len(file_list) > 1:
@@ -39,9 +41,11 @@ class ContactList:
         self.file = file_list[0]
         return self.file
     
-    # Abre arquivo csv no mesmo diretório e retorna dataframe sem NaNs.
+
     def from_csv(self):
-        # Abre arquivo csv usando encoding determinado programaticamente
+        '''Open csv file and return dataframe without NaNs
+        '''
+        # Open csv with different encodings and separators
         csv_file = f'{self.input}/{self.file}'
         encoding_list = [open(f'{csv_file}').encoding, self.encoding, 'utf8']
         separetor_list = [',', ';']
@@ -68,9 +72,9 @@ class ContactList:
         text = unidecode(string)
         return text
     
-    # Retira acentuacao grafica dos nomes, torna apenas primeira letra maiuscula e 
-    # cria nova coluna com primeiro nome.
     def clean_names(self):
+        '''Remove accents from names, capitalize first letter and create new column with first name.
+        Returns dataframe with new columns.'''
         new_column = []
         for string in self.df['nome']:
             name = self.__string_normalizer(string)
@@ -133,6 +137,11 @@ class ContactList:
         return self.df
     
     def clean_numbers(self):
+        '''Remove non-numeric characters from numbers,
+        create new columns with DDI, DDD and sufix 
+        and concatenate them to create a new column with the complete number.
+        Returns dataframe with new columns.'''
+
         self.df = self.df.assign(whatsapp = self.df['cel'].str.replace('\D+', '', regex=True))
         self.df = self.df.assign(prefix = self.df['whatsapp'].str[:-9])
         self.df = self.df.assign(DDI = self.df['prefix'].str[:-2],
@@ -152,11 +161,17 @@ class ContactList:
         return self.df
     
     def deduplicate(self):
+        '''Remove duplicated contacts from dataframe based on whatsapp and email columns.
+        Returns dataframe without duplicated contacts.
+        '''
         self.duplicated = self.df.duplicated().sum()
         self.df = self.df.drop_duplicates(subset=['whatsapp', 'email'])
         return self.df
     
     def report(self):
+        '''Prints a report with the number of contacts added and the number
+        of duplicated contacts found and removed.
+        '''
         self.number_contacts = len(self.df['name'])
         print(f'Fim do script')
         print(f"-" * 30)
@@ -178,6 +193,8 @@ class ContactList:
         
 # Functions   
 def output_text():
+    '''Prints a welcome message and the current directory.
+    '''
     print('ATENÇÃO: Este script deve ser executado no mesmo diretório do arquivo .csv')
     print('O arquivo .csv deve conter as colunas: timestamp, nome, email, cel')
     time.sleep(2)
