@@ -5,6 +5,8 @@ import time
 import pandas as pd
 from unidecode import unidecode
 
+# Some shit to remove later
+
 class ContactList:
     def __init__(self, output: str = "cleaned", encoding: str = "latin1",):
         # Generates path to base directory
