@@ -1,3 +1,10 @@
+# Files to be ignored
+data/
+app/
+build/
+dist/
+cleaned/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
