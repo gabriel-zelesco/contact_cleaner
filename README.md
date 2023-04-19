@@ -28,7 +28,6 @@ The script can be made into an executable using pyinstaller. To do so, run the f
 ```bash
 pyinstaller --onefile --name=cleaner main.py
 ```
-```
 
 ## License
 [MIT](https://choosealicense.com/licenses/mit/)
