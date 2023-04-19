@@ -11,13 +11,16 @@ class ContactList:
         base_dir = os.getcwd()       
         
         # Self
-        self.columns = ['timestamp', 'nome', 'cel', 'email',]
-        self.final_columns = ['timestamp', 'name', 'first_name', 'whatsapp', 'email', 'nome', 'cel']
+        self.columns = ['timestamp', 'nome', 'cel', 'email', 'bairro',
+                         'regiao', 'interesse', 'outros_interesses', 'lgpd', 'matriz']
+        self.final_columns = ['timestamp','matriz', 'name', 'first_name', 'whatsapp',
+                            'valid_num', 'email',  'bairro', 'regiao',
+                            'interesse', 'outros_interesses', 'lgpd', 'nome', 'cel']
         self.encoding = encoding
         self.started = datetime.today()
         self.base_dir = base_dir
         self.input = f'{base_dir}'
-        self.file = self.__find_csv_filename()
+        self.file = self.__find_filename()
         self.name = self.file[:-4]
         self.export_path = self.__create_dir()
         self.output = f'{self.export_path}/{output}-{self.name}.csv'
@@ -31,8 +34,8 @@ class ContactList:
             os.mkdir(export_path)
         return export_path
     
-    def __find_csv_filename(self, suffix=".csv" ):
-        # Finds csv file in the same directory as main.py
+    def __find_filename(self, suffix=".xlsx"):
+        # Finds excel file in the same directory as main.py
         filenames = os.listdir(self.input)
         file_list = [filename for filename in filenames if filename.endswith(suffix)]
         if len(file_list) > 1:
@@ -67,6 +70,30 @@ class ContactList:
                 break
         df = df.fillna('no_data')
         return df  
+    
+    def from_xlsx(self):
+        '''Open xlsx file and return dataframe without NaNs
+        '''
+        # Open xlsx with different encodings and separators
+        xlsx_file = f'{self.input}/{self.file}'
+        encoding_list = [open(f'{xlsx_file}').encoding, self.encoding, 'utf8']
+        break_out_flag = False
+        
+        for enco in encoding_list:
+            try:
+                df = pd.read_excel(xlsx_file, encoding=enco, dtype='str', usecols=lambda c: c in set(self.columns))
+                if df.empty:
+                    raise Exception('Dataframe is empty.')
+            except:
+                print(f'Encoding ({enco}) did not work. Retrying.')
+            else:
+                print(f'Encoding ({enco}) used successfully.')
+                break_out_flag = True
+                break
+        if break_out_flag:
+            pass
+        df = df.fillna('no_data')
+        return df
     
     def __string_normalizer(self, string):
         text = unidecode(string)
@@ -188,7 +215,7 @@ class ContactList:
     
     
     def save_file(self):
-        self.df.to_csv(self.output, header=False, sep=';',encoding='utf8', index = False)
+        self.df.to_csv(self.output, header=False, sep=',',encoding='utf8', index = False)
         
         
 # Functions   
@@ -210,7 +237,8 @@ if __name__ == '__main__':
 
     #instancia o ContactList
     cl = ContactList()
-    cl.df = cl.from_csv()
+    cl.df = cl.from_xlsx()
+
     cl.clean_names()   
     cl.clean_numbers()
     cl.clean_email()
@@ -219,4 +247,5 @@ if __name__ == '__main__':
     cl.report()
     close = input('Press ENTER to close this window.')
     
+
     exit()
