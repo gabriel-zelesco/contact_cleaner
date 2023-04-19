@@ -1,7 +1,7 @@
 # Contancts cleaner
 
 This is a simple script to clean your contacts from duplicates and empty fields.
-It also returns the cel number of contacts as used in whatsapp.
+It also returns the phone number of contacts as used in whatsapp.
 
 ## Usage
 
@@ -10,11 +10,11 @@ The script is written in python 3.9. It uses the following libraries:
 - unidecode
 
 ## How to use
-The script takes no arguments. It reads the .csv file that is in the same directory as the script. The cleaned file is saved in a new directory called "cleaned" and will have the same name as the original file with the prefix "clened". The .csv file must have the following columns:
-- 'nome'
-- 'cel'
-- 'email'
-- 'timestamp'
+The script takes no arguments. It reads the .csv file that is in the same directory as the script. The cleaned file is saved in a new directory called "cleaned" and will have the same name as the original file with the prefix "cleaned". The .csv file must have the following columns:
+- 'nome' : name of the contact 
+- 'cel' : phone number of the contact
+- 'email' : email of the contact
+- 'timestamp' : timestamp of the generation of the contact
 
 There is an example file in the repository that can be used to test the script.
 
@@ -27,7 +27,6 @@ conda env create -f environment.yml
 The script can be made into an executable using pyinstaller. To do so, run the following command with the environment activated:
 ```bash
 pyinstaller --onefile --name=cleaner main.py
-```
 ```
 
 ## License
