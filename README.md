@@ -1,4 +1,4 @@
-# Contancts cleaner
+# Contanct cleaner
 
 This is a simple script to clean your contacts from duplicates and empty fields.
 It also returns the phone number of contacts as used in whatsapp.
