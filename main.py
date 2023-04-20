@@ -5,7 +5,9 @@ import time
 import pandas as pd
 from unidecode import unidecode
 
-# Some shit to remove later
+
+columns = ['timestamp', 'nome', 'cel', 'email', 'bairro',
+           'regiao', 'interesse', 'outros_interesses', 'lgpd', 'matriz']
 
 class ContactList:
     def __init__(self, output: str = "cleaned", encoding: str = "latin1",):
@@ -13,8 +15,7 @@ class ContactList:
         base_dir = os.getcwd()       
         
         # Self
-        self.columns = ['timestamp', 'nome', 'cel', 'email', 'bairro',
-                         'regiao', 'interesse', 'outros_interesses', 'lgpd', 'matriz']
+        self.columns = columns
         self.final_columns = ['timestamp','matriz', 'name', 'first_name', 'whatsapp',
                             'valid_num', 'email',  'bairro', 'regiao',
                             'interesse', 'outros_interesses', 'lgpd', 'nome', 'cel']
@@ -23,7 +24,7 @@ class ContactList:
         self.base_dir = base_dir
         self.input = f'{base_dir}'
         self.file = self.__find_filename()
-        self.name = self.file[:-4]
+        self.name = self.file[:-5]
         self.export_path = self.__create_dir()
         self.output = f'{self.export_path}/{output}-{self.name}.csv'
     
@@ -78,22 +79,14 @@ class ContactList:
         '''
         # Open xlsx with different encodings and separators
         xlsx_file = f'{self.input}/{self.file}'
-        encoding_list = [open(f'{xlsx_file}').encoding, self.encoding, 'utf8']
-        break_out_flag = False
         
-        for enco in encoding_list:
-            try:
-                df = pd.read_excel(xlsx_file, encoding=enco, dtype='str', usecols=lambda c: c in set(self.columns))
-                if df.empty:
-                    raise Exception('Dataframe is empty.')
-            except:
-                print(f'Encoding ({enco}) did not work. Retrying.')
-            else:
-                print(f'Encoding ({enco}) used successfully.')
-                break_out_flag = True
-                break
-        if break_out_flag:
-            pass
+        try:
+            df = pd.read_excel(xlsx_file, dtype='str', usecols=lambda c: c in set(self.columns))
+            if df.empty:
+                raise Exception('Dataframe is empty.')
+        except:
+            print(f'Fail to load {xlsx_file}.')
+
         df = df.fillna('no_data')
         return df
     
@@ -111,6 +104,22 @@ class ContactList:
         self.df = self.df.assign(name = new_column)
         self.df['name'] = self.df['name'].str.title()
         self.df = self.df.assign(first_name = self.df['name'].str.split().str.get(0))
+        return self.df
+    
+    def __clean_column(self, column_name):
+        new_column = []
+        for string in self.df[column_name]:
+            string = self.__string_normalizer(string)
+            new_column.append(string)
+        self.df = self.df.assign(**{column_name: new_column})
+        self.df[column_name] = self.df[column_name].str.lower()
+        return self.df
+    
+    def clean_columns(self):
+        '''Remove accents from columns.
+        Returns dataframe with new columns.'''
+        for column in self.df.columns:
+            self.df = self.__clean_column(column)
         return self.df
     
     def __get_DDI(self):
@@ -161,9 +170,14 @@ class ContactList:
         self.df['whatsapp'] = (self.df['DDI'].str.cat(self.df['DDD']).str.cat(self.df['sufix']))
         return self.df
     
+    def __valid_numbers(self):
+        self.df = self.df.assign(valid_num = ~(self.df['whatsapp'].str.contains('invalid')))
+        return self.df
+    
     def __drop_columns(self):
         self.df = self.df.drop(columns=['prefix', 'DDI', 'DDD', 'sufix'], axis=1)
         return self.df
+    
     
     def clean_numbers(self):
         '''Remove non-numeric characters from numbers,
@@ -182,19 +196,31 @@ class ContactList:
         self.df = self.__get_number()
         self.df = self.__concat_number()
         self.df = self.__drop_columns()
-        self.df = self.df[self.final_columns]
+        self.df = self.__valid_numbers()
         return self.df
     
     def clean_email(self):
-        self.df['email'] = self.df['email'].str.replace(' ','').str.lower()
+        self.df['email'] = self.df['email'].str.replace(' ','')
+        return self.df
+    
+    def check_existing_columns(self):
+        '''Check if columns are in dataframe.
+        Returns dataframe with new columns.'''
+        for column in self.final_columns:
+            if column not in self.df.columns:
+                self.df = self.df.assign(**{column: 'no_data'})
+        self.df.columns = self.final_columns
         return self.df
     
     def deduplicate(self):
         '''Remove duplicated contacts from dataframe based on whatsapp and email columns.
         Returns dataframe without duplicated contacts.
         '''
-        self.duplicated = self.df.duplicated().sum()
-        self.df = self.df.drop_duplicates(subset=['whatsapp', 'email'])
+        critical_columns = ['whatsapp', 'email', 'interesse']
+        self.original_length = len(self.df['name'])
+        
+        self.duplicated = self.df.duplicated(subset=critical_columns).sum()
+        self.df = self.df.drop_duplicates(subset=critical_columns, keep='last')
         return self.df
     
     def report(self):
@@ -207,10 +233,16 @@ class ContactList:
         print((f"\n\n"))
         print(f'Arquivo gerado com sucesso em: \n{self.output}.')
         print((f"\n"))
+        print(f'{self.original_length} contatos encontrados no arquivo de origem.')
         print(f'{self.number_contacts} contatos adicionados.')
         print(f'{self.duplicated} contatos duplicados encontrados e excluidos.')
+        print(f"\n")
+        print(f'O critério de exclusão de contatos duplicados foi: \nwhatsapp, email, interesse.')
+        print(f'Quando duplicado, foi mantido a última inclusão.')
+        print(f'\n')
+        print(f'Colunas do arquivo de saída: \n{self.final_columns}')
         print((f"\n\n"))
-        print(self.df.head())
+        print(self.df.head(10))
         print(f"-" * 30)
         print((f"\n\n"))
         time.sleep(2)
@@ -225,7 +257,7 @@ def output_text():
     '''Prints a welcome message and the current directory.
     '''
     print('ATENÇÃO: Este script deve ser executado no mesmo diretório do arquivo .csv')
-    print('O arquivo .csv deve conter as colunas: timestamp, nome, email, cel')
+    print(f'O arquivo .csv deve conter as colunas: {columns}')
     time.sleep(2)
     print(f'Iniciando script...')
     print(f"-" * 30)
@@ -233,21 +265,23 @@ def output_text():
     print(f'Script rodado em: {os.getcwd()}')
     time.sleep(0.5)
       
-      
-if __name__ == '__main__':
-    output_text()
-
-    #instancia o ContactList
+def main():
+    '''Main function. Creates an instance of ContactList and runs the methods.
+    '''
     cl = ContactList()
     cl.df = cl.from_xlsx()
-
+    cl.clean_columns()
     cl.clean_names()   
     cl.clean_numbers()
     cl.clean_email()
+    cl.check_existing_columns()
     cl.deduplicate()
     cl.save_file()
     cl.report()
     close = input('Press ENTER to close this window.')
-    
-
+    exit()
+      
+if __name__ == '__main__':
+    output_text()
+    main()    
     exit()
