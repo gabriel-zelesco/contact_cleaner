@@ -118,7 +118,7 @@ class ContactList:
     def clean_columns(self):
         '''Remove accents from columns.
         Returns dataframe with new columns.'''
-        for column in self.columns:
+        for column in self.df.columns:
             self.df = self.__clean_column(column)
         return self.df
     
@@ -178,6 +178,7 @@ class ContactList:
         self.df = self.df.drop(columns=['prefix', 'DDI', 'DDD', 'sufix'], axis=1)
         return self.df
     
+    
     def clean_numbers(self):
         '''Remove non-numeric characters from numbers,
         create new columns with DDI, DDD and sufix 
@@ -196,11 +197,19 @@ class ContactList:
         self.df = self.__concat_number()
         self.df = self.__drop_columns()
         self.df = self.__valid_numbers()
-        self.df = self.df[self.final_columns]
         return self.df
     
     def clean_email(self):
         self.df['email'] = self.df['email'].str.replace(' ','')
+        return self.df
+    
+    def check_existing_columns(self):
+        '''Check if columns are in dataframe.
+        Returns dataframe with new columns.'''
+        for column in self.final_columns:
+            if column not in self.df.columns:
+                self.df = self.df.assign(**{column: 'no_data'})
+        self.df.columns = self.final_columns
         return self.df
     
     def deduplicate(self):
@@ -265,6 +274,7 @@ def main():
     cl.clean_names()   
     cl.clean_numbers()
     cl.clean_email()
+    cl.check_existing_columns()
     cl.deduplicate()
     cl.save_file()
     cl.report()
